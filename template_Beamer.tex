@@ -1,0 +1,353 @@
+\documentclass{beamer}
+\usetheme{default}
+\usepackage{listings}
+\usepackage{xcolor}
+
+
+\title{BorgBackup}
+\author{Mohammad Fazeli}
+\begin{document}
+\begin{frame}[plain]
+    \maketitle
+\end{frame}
+\begin{frame}{Frame Title}
+	\begin{center}
+	"I found the Holy Grail of backups."
+	
+	(Stavros K. about Attic-Backup, 8/2013)
+	\end{center}
+\end{frame}
+\begin{frame}{Backup Desiderata}
+	\begin{itemize}
+%		animate
+		\item Take very little space
+		\item Encrypted
+		\begin{itemize}
+			\item Backup place hacked means everything is gone
+		\end{itemize}
+		\item Multiple versions of data
+		\item Pruning versions By Grandfather-Father-Son
+		\item Deduplicated, reduced space
+	\end{itemize}
+\end{frame}
+\begin{frame}{Backup Desiderata: Not using Borg}
+\begin{itemize}
+	\item Disk failure shouldn't cause data loss
+	\item Server failure shouldn't effect availability
+	\item Disks have bit-rot
+\end{itemize}
+\end{frame}
+\begin{frame}{My Solution}
+\begin{center}
+	Borg + BTRFS RAID1 on at least two locations  
+	BTRFS RAID1 removes bit-rot problem  
+	two locations solves availability 
+\end{center}
+\end{frame}
+
+\begin{frame}{What is BorgBackup}
+	BorgBackup (short: Borg) deduplicating backup program(compressed and encrypted authenticated)
+\end{frame}
+
+\begin{frame}{Borg Features}
+	\begin{itemize}
+	\item cli backup tool, separate GUIs
+
+	\item good arch / platform / fs support
+
+	\item deduplication 
+
+	\item compression  
+
+	\item auth. encryption
+
+	\item read from locally mounted fs
+
+	\item store to local fs or to remote borg
+	
+	\item Fuse-mount backup archives
+
+	\item HW-accelerated crypto
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Borg as a Project}
+	\begin{itemize}
+		
+	\item community project
+	
+	\item FOSS  (BSD license)
+	
+	\item Python 3.7(current, 3.6-9 supproted)
+	
+	\item for speed:  a little Cython \& C
+	
+	\item good docs  (for users, devs)
+	
+	\item good test coverage(83\% today), travis CI
+	
+	\item github: borgbackup/community
+	\item Pays money for security bugs(~10,500\$ paid today)  
+\end{itemize}
+\end{frame}
+%https://camo.githubusercontent.com/9fc113ee23c824302ed977c516eb08b7d1b1e0db600b7186737bd32400f93976/68747470733a2f2f61736369696e656d612e6f72672f612f3133333239322e706e67
+
+\begin{frame}{In Practice}
+	\begin{itemize}
+		\item size of postgres db 
+		\item 48 hourly
+		\item 20 daily 
+		\item Weekly 6
+		\item Monthly ...
+		\item 78 instances  each ~2GB
+		\item all:153.06 GB
+		\item compressed 41.24 GB
+		\item deduplicated 22.50 GB
+	\end{itemize}
+\end{frame}
+\begin{frame}{In Practice}
+\begin{itemize}
+	\item media folder of a big django project 
+	\item 3 instances each about 63 GB
+	\item 182.70 GB compressed all instances(incompressible mostly already compressed images)
+	\item 60.13 GB deduplicated across time
+\end{itemize}
+\end{frame}
+
+\begin{frame}{In Practice}
+	- a little changing postgres db 
+	
+	- 12 instances
+	
+	- 7 daily 
+	
+	- 4 weekly 
+	
+	- 1 monthly 
+	
+	- 2.75 GB all 
+	
+	- compressed 180MB
+	
+	- deduplicated 30 MB
+\end{frame}
+
+\begin{frame}{In Practice}
+	- a wordpress site files  
+	
+	- 32 instances   
+	
+	- 80 GB total   
+	
+	- 70 GB compressed(incompressible mostly images)  
+	
+	- deduplicated 2.68 GB
+	
+\end{frame}
+
+\begin{frame}{In Practice}
+	- a wordpress site db
+	
+	- 32 instances
+	
+	- 5.5 GB
+	
+	- 420 MB compressed
+	
+	- 204 MB deduped
+\end{frame}
+
+\begin{frame}{In Practice}
+	- a lot of mail boxes
+	
+	- 20 instances
+	
+	- 20 daily
+	
+	- total 727GB
+	
+	- 348 GB compressed(compressible since it is text)
+	
+	- deduped 17.5 GB
+\end{frame}
+
+\begin{frame}{In Practice}
+	Total size: 1145 GB
+	
+	Fitted in ~103GB
+\end{frame}
+
+\begin{frame}{It scales well}
+	one of developers of borg
+	borg info ssh://borg@myserver/repos/myrepo
+	
+	Original size  22.76 TB
+	
+	 Compressed size 18.22 TB
+	 
+	   Dedup size 486.20 GB
+	   
+	Unique chunks 6305006
+	
+	         Total chunks                          272643223
+\end{frame}
+
+\begin{frame}{Where to put}
+	
+	Own server with ssh and free space:
+	
+	install borg, configure, done!
+	
+	No own remote server? No problem:
+	\begin{itemize}
+		\item rsync.net (ssh, cli)
+		\item hetzner's storage box
+		\item borgbase.com (ssh, web, easy)
+		\item local repo + rclone to cloud
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Deduplicating}
+	dedup does \textbf{NOT} depend on:
+	\begin{itemize}
+		\item file/directory names: 
+		\begin{itemize}
+			\item move file even between machines, no change required
+		\end{itemize}
+		 \item Whole file hash and timestamps:
+		 \begin{itemize} 
+		 	\item only a small part of a file changed,only the change, VMs , or raw disks, only changes are synced.
+		\end{itemize}
+		
+		\item Place of chunk in a file:
+		\begin{itemize}
+			\item stuff moved around inside a file , doesn't increase it.
+		\end{itemize} 
+	
+	\end{itemize}
+\end{frame}
+
+%\begin{frame}{Speed}
+%	speed:
+%	
+%	- perf-critical code in C/Cython(chunking, compression, encryption)
+%	
+%	- local caches file/chunks index data
+%	
+%	- quick detection of unmodified data
+%	
+%\end{frame}
+
+\begin{frame}{Encryption}
+	Enc :
+	\begin{itemize}
+		\item  Tampering/Corruption detection by HMAC or blake2b
+		
+		%	- note:(less cpu better than HMAC-SHA256)
+		\item 256 bit AES- CTR
+		
+		\item uses OpenSSL(libcrypto)
+		
+		\item Passphrase and a key, could be separate
+		
+		\item PDKDF2 100K rounds
+		
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Compression}
+\begin{itemize}
+	\item none
+	\item lz4: fast, low compression(faster than none :-| )
+	\item zstd: from high speed low compression to slow and high compression 
+	\item zlib: medium speed and compression
+	\item lzma: low speed, high compression
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Safe} 
+	borg uses:
+	
+	- checksums
+	
+	- transactions
+	
+	- fs: syncing, atomic ops
+	
+	- backup repo- log-like KV store
+	
+	- checkpoint while backing up
+	
+\end{frame}
+
+\begin{frame}[fragile]
+	\begin{lstlisting}[backgroundcolor = \color{black},
+		basicstyle=\color{lightgray}
+			language = bash,
+			framexleftmargin = 1em]
+# initialize a repository:
+borg init /tmp/borg
+
+# create a "first" archive inside this repo (verbose): 
+borg create --progress --stats\
+
+ /tmp/borg::first ~/Desktop
+
+
+# create a "second" archive (less verbose):
+borg create /tmp/borg::second ~/Desktop
+
+# even more verbose:
+borg create -v --stats /tmp/borg::third ~/Desktop
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+	\begin{lstlisting}[backgroundcolor = \color{black},
+		basicstyle=\color{lightgray}
+		language = bash,
+		framexleftmargin = 1em]
+# list repo / archive contents:
+
+borg list /tmp/borg
+borg list /tmp/borg::first
+
+# extract ("restore") from an archive to cwd:
+
+mkdir test ; cd test
+borg extract /tmp/borg::third
+
+# simulate extraction (good test):
+borg extract -v --dry-run /tmp/borg::third
+
+# check consistency of repo:
+borg check /tmp/borg
+\end{lstlisting}
+\end{frame}
+
+
+
+\begin{frame}[fragile]
+	\begin{lstlisting}[backgroundcolor = \color{black},
+		basicstyle=\color{lightgray}
+		language = bash,
+		framexleftmargin = 1em]
+		# list repo / archive contents:
+		
+		borg list /tmp/borg
+		borg list /tmp/borg::first
+		
+		# extract ("restore") from an archive to cwd:
+		
+		mkdir test ; cd test
+		borg extract /tmp/borg::third
+		
+		# simulate extraction (good test):
+		borg extract -v --dry-run /tmp/borg::third
+		
+		# check consistency of repo:
+		borg check /tmp/borg
+	\end{lstlisting}
+\end{frame}
+
+\end{document}
