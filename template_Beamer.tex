@@ -41,7 +41,8 @@
 	
 	(Stavros K. about Attic-Backup, 8/2013)
 	\end{center}
-\note{about backup challenges, what fails, how to  did we prevent, take a look at tech , take a look at code and running repos}
+\note{about backup challenges, what fails, how to  did we prevent, take a look at tech , take a look at code and running repos, 
+What NOT talk, cold site, warm site, clustering and replication and etc}
 \end{frame}
 
 
@@ -62,6 +63,7 @@
 \end{itemize}
 \end{itemize}
 \end{frame}
+
 
 
 \begin{frame}{What Else Can Go Wrong? Disks}
@@ -87,6 +89,21 @@
 \end{frame}
 
 
+
+\begin{frame}{Bit rot effect example}
+	\includegraphics[scale=.7]{bitrot_example.png}
+\end{frame}
+
+
+\begin{frame}{What Can Go Wrong? the Human Factor}
+	\begin{itemize}
+		\item Wiped a production db myself :) \note{nimkat}
+		\item Getting Hacked(like arvan)\note{other examples like aram}
+		\item Getting Ransomwares
+	\end{itemize}
+\end{frame}
+
+
 \begin{frame}
 	\begin{center}
 		\Huge Solutions
@@ -99,7 +116,7 @@
 		\item Take very little space
 		\item Encrypted
 		\begin{itemize}
-			\item Backup place hacked means everything is gone
+			\item If Backup storage gets exposed means everything is in the open
 		\end{itemize}
 		\item Multiple versions of data
 		\item Pruning versions By Grandfather-Father-Son
@@ -112,15 +129,22 @@
 \begin{itemize}
 	\item Disk failure shouldn't cause data loss
 	\item Server failure shouldn't effect availability
-	\item Disks have bit-rot
+	\item Disks bit-rot shouldn't affect the data
+	\item Backup files getting exposed should make them accessible
+	\item Malicious ones can't delete backups(even if the backup taker server gets exposed)
 \end{itemize}
 \end{frame}
 \begin{frame}{My Solution}
-\begin{center}
-	Borg + BTRFS RAID1 on at least two locations  
-	BTRFS RAID1 removes bit-rot problem  
-	two locations solves availability 
-\end{center}
+\begin{itemize}
+\item Borg + BTRFS RAID1 on at least two locations  
+
+\item BTRFS RAID1 removes bit-rot problem
+
+\item Two locations alleviates availability problems
+
+\item Rsync.net and BTRFS snapshots solves immutability 
+\end{itemize}
+	 
 \end{frame}
 
 \begin{frame}{What is BorgBackup}
@@ -137,7 +161,7 @@
 
 	\item compression  
 
-	\item auth. encryption
+	\item auth. encryption\note{proves authenticity of data too}
 
 	\item read from locally mounted fs
 
@@ -146,6 +170,8 @@
 	\item Fuse-mount backup archives
 
 	\item HW-accelerated crypto
+	\item Computational intensive stuff written in C, others in Python
+	\item Uses single core(con)
 \end{itemize}
 \end{frame}
 
@@ -165,7 +191,7 @@
 	\item good test coverage(83\% today), travis CI
 	
 	\item github: borgbackup/community
-	\item Pays money for security bugs(~10,500\$ paid today)  
+	\item Pays money for security bugs(~10,500\$ paid till 2020)  
 \end{itemize}
 \end{frame}
 %https://camo.githubusercontent.com/9fc113ee23c824302ed977c516eb08b7d1b1e0db600b7186737bd32400f93976/68747470733a2f2f61736369696e656d612e6f72672f612f3133333239322e706e67
@@ -270,13 +296,13 @@
 	         Total chunks                          272643223
 \end{frame}
 
-\begin{frame}{Where to put}
+\begin{frame}{Where to put the data}
 	
-	Own server with ssh and free space:
+	Own a server with ssh and free space:
 	
 	install borg, configure, done!
 	
-	No own remote server? No problem:
+	No remote server? No problem:
 	\begin{itemize}
 		\item rsync.net (ssh, cli)
 		\item hetzner's storage box
@@ -334,28 +360,23 @@
 \end{frame}
 
 \begin{frame}{Compression}
+	works on deduplicated block level
 \begin{itemize}
 	\item none
-	\item lz4: fast, low compression(faster than none :-| )
+	\item lz4: fast, low compression(faster than no compression :-| )
 	\item zstd: from high speed low compression to slow and high compression 
 	\item zlib: medium speed and compression
 	\item lzma: low speed, high compression
+	\item auto: first lz4 it(superfast), if its  size have been reducedin size(compressible) then compress with other schemes.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Safe} 
 	borg uses:
-	
 	- checksums
-	
 	- transactions
-	
 	- fs: syncing, atomic ops
-	
-	- backup repo- log-like KV store
-	
 	- checkpoint while backing up
-	
 \end{frame}
 
 \begin{frame}[fragile]
@@ -426,6 +447,86 @@ borg check /tmp/borg
 		# check consistency of repo:
 		borg check /tmp/borg
 	\end{lstlisting}
+\end{frame}
+\note{
+BTRFS; done
+picture of bit rot from github; done
+Borgmatic;  done
+Healthcheck.io; done
+No compression and auto; done 
+fs snapshots for immutability; done
+}
+\begin{frame}{New Generation Filesystems}
+\begin{itemize}
+	\item Bit rot protection(check and fix on each read)
+	\item It has fast space efficient snapshot \note{not like LVM}
+	\item Use RAID1(RAID5/6 not stable)
+	\item ZFS works, Ceph/S3 most other new things have this too.
+	\item Run scrub periodically(reads all data and fix)
+	\item Keep snapshots, and rotate them on your own(even if the client gets exposed, can't delete snapshots)
+	\item openSUSE's default filesystem
+	\item super efficient diff snapshot transfer to other locations
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{Borgmatic}
+	A tool for automation for backup with a lot of useful stuff
+	\begin{itemize}
+		\item Config is a YAML file
+		\item Rotation Scheme is written in YAML
+		\item Supports pre/post execution hooks
+		\item Monitoring using healthchecks.io and others
+	\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Healthchecks.io}
+	An opensource Scheduled-Job monitoring.
+	
+	Cron schedule are defined in the site, a token is given.
+
+	Check start, end and non execution of job and alert properly
+	
+\end{frame}
+
+
+\begin{frame}{rsync.net}
+	Provide ssh accessible, backup space storage
+	
+	Has geo-redundant option too
+	
+	Minimum space is 400GB for 10\$/month(17.5\$/month for geo-redundant)
+	
+	ZFS with RAID is the underlaying file system
+	
+	7 free daily immutable snapshot.
+	
+	Configurable cron time for more immutable snapshots.
+	
+	 Extra ones is counted against your quota but ZFS snapshots are block levels diffs, thus it is only actually overwritten/added blocks of data not a new copy of it
+\end{frame}
+
+
+\begin{frame}{What we do for backups?}
+	\begin{itemize}
+		\item For new env, setup ssh access on backup client and storage server using ansible
+		\item install proper borg version using ansible 
+		\item install borgmatic using pip in the same ansible playbook
+		\item Write a borgmatic YAML config(from templates available for different usecases across the company)
+		\item Add proper cron schedule at healthchecks.io and add the token to YAML file
+		\item put borgmatic in crontab
+	\end{itemize}
+\end{frame}
+\begin{frame}{Faults}
+	Trusting borg
+	
+	SSH to outside countries sometimes is problematic
+	
+	Populating a db from SQL dumps could be time consuming
+	
+	
 \end{frame}
 
 \end{document}
