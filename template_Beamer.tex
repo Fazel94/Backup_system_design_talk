@@ -1,22 +1,98 @@
-\documentclass{beamer}
+	\documentclass{beamer}
 \usetheme{default}
 \usepackage{listings}
 \usepackage{xcolor}
 
 
-\title{BorgBackup}
+\title{Maktabkhooneh Backup System}
+\subtitle{Requriements and Design of a Reliable Backup System}
 \author{Mohammad Fazeli}
+\institute{Maktabkhooneh.org\\[1em]\includegraphics[width=3cm]{android-chrome-192x192.png}}
 \begin{document}
 \begin{frame}[plain]
     \maketitle
 \end{frame}
-\begin{frame}{Frame Title}
+\begin{frame}{Who am I?}
+	Mohammad Fazeli  
+	
+	DevOps Tech Lead at \url{Maktabkhooneh.org}
+	
+	Masters Degree in Computer Science
+	
+	6 years and counting working with Python to deliver education software online :)
+\end{frame}
+\begin{frame}{Where is Maktabkhooneh?}
+	Online Education Platform :) 
+	
+	Started 8 years ago
+	
+	More than \textbf{300 free courses mostly from Sharif University} and other top universities online.
+	
+	More than 100 paid courses about practical stuff for out of university.
+	
+	Use discount code provided in the session for 70,000 toman off on paid ones, and \textbf{checkout more than 300 free courses} too.
+	
+\end{frame}
+
+
+\begin{frame}{What is this about?}
 	\begin{center}
 	"I found the Holy Grail of backups."
 	
 	(Stavros K. about Attic-Backup, 8/2013)
 	\end{center}
+\note{about backup challenges, what fails, how to  did we prevent, take a look at tech , take a look at code and running repos}
 \end{frame}
+
+
+\begin{frame}{What Can Go Wrong For Web App?\small{(Google 2010, Jeff Dean)}}
+	\includegraphics[scale=.45]{jeff_dean_hardware_wrong_google_2010_stanford.png}
+\end{frame}
+
+
+\begin{frame}{What Else Can Go Wrong? RAM}
+\begin{itemize}
+\item RAM bits flip
+\begin{itemize}
+	\item \underline{\textcolor{red}{\href{https://en.wikipedia.org/wiki/Soft_error\#Cosmic_rays_creating_energetic_neutrons_and_protons}{IBM}}}: cosmic rays can flip bits in RAM
+	\item Server could crash, Data could get corrupted
+	\item 256MB, one bit flip per month(in 1996)
+	\item \underline{\textcolor{red}{\href{https://www.intelligentmemory.com/support/faq/ecc-dram/how-often-do-ecc-correctable-single-bit-errors-occur-and-how-about-double-multi-bit-errors.php}{Google}}}: one bit flip per 14 to 40 hours per Gigabyte of RAM, not evenly distributed though\note{some machines have alot, some don't have, age screw it, datacenter is good}
+	\item Solution: ECC RAM\note{you can read somewhere on servers, 64 bit one error could be corrected}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{What Else Can Go Wrong? Disks}
+	\begin{itemize}
+		\item Storage \underline{\textcolor{red}{\href{https://en.wikipedia.org/wiki/Data_degradation\#In_storage}{bits flip on their own}}}
+		\begin{itemize}
+			\item SSD electric charges leaks away 
+			\item HDD magnetic orientation change changes\note{specially in warm/humid area}
+			\item Google back in 2005 \note{sorting 1TB of data, nearly sorted, pdf included in the repo}
+			\item Today SSD/HDD have ECC inside
+			\item URE \note{https://serverfault.com/a/79922/367171}
+			\item Kingston: URE for consumer SSD 1 in 110TB read, Enterprise 1 in 1110TB read(Don't trust them with numbers)
+			\item Some drives have way more often\note{likely production fault, One drive from 2017 have more than 2M faults)}
+			\item Facebook RAID controller wrote data in the middle of the disks on boot(firmware problem)\note{facebook btrfs talk}
+			\item Solution:
+			\begin{itemize}
+				\item RAID 5?
+				\item RAID 1?
+				\item BTRFS/ZFS/Ceph/... store hash, check it on every read, recover from specific implementation RAID.
+			\end{itemize}
+		\end{itemize}
+	\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+	\begin{center}
+		\Huge Solutions
+	\end{center}
+\end{frame}
+
 \begin{frame}{Backup Desiderata}
 	\begin{itemize}
 %		animate
@@ -30,6 +106,8 @@
 		\item Deduplicated, reduced space
 	\end{itemize}
 \end{frame}
+
+
 \begin{frame}{Backup Desiderata: Not using Borg}
 \begin{itemize}
 	\item Disk failure shouldn't cause data loss
